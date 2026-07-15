@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# PandaServerHost .gitignore
+# Keeps ALL personal data, secrets, and runtime state OUT of the repository.
+# ---------------------------------------------------------------------------
+
+# Secrets & environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+!/root/.ccr/ca-bundle.crt
+secrets/
+config.local.*
+
+# Database (contains user accounts, password hashes, tokens)
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+
+# Per-server Minecraft data (worlds, mods, plugins, configs, logs)
+servers/
+minecraft-data/
+*.jar
+!docker/**/*.jar
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Logs
+logs/
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*~
+
+# Backups & dumps
+*.bak
+*.backup
+backups/
+dump.rdb
+
+# Uploads / temp
+tmp/
+temp/
+uploads/

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= server.name %> · PandaServerHost</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <%- include('partials/topbar', { user }) %>
+  <div class="container grid" data-server-id="<%= server.id %>">
+    <div id="msg"></div>
+
+    <div class="card">
+      <div class="row" style="align-items:flex-start">
+        <div>
+          <h3 style="margin-bottom:4px"><%= server.name %> <span id="statusBadge" class="badge"><%= server.status %></span></h3>
+          <div class="muted">
+            <%= server.server_type %> · MC <%= server.mc_version %> ·
+            Port <b><%= server.host_port %></b> (port-forward this) ·
+            <%= server.ram_mb %>MB RAM · <%= server.cpu_cores %> CPU · <%= server.disk_mb %>MB disk
+          </div>
+        </div>
+        <div class="row tight" style="flex:0 0 auto">
+          <button class="good" id="btnStart">Start</button>
+          <button class="warn" id="btnRestart">Restart</button>
+          <button class="danger" id="btnStop">Stop</button>
+        </div>
+      </div>
+      <div class="stat" style="margin-top:14px">
+        <div class="item"><span class="muted">CPU</span><b id="statCpu">–</b></div>
+        <div class="item"><span class="muted">Memory</span><b id="statMem">–</b></div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <h3>Console output</h3>
+        <pre class="logs" id="logs">Loading…</pre>
+        <button id="btnRefreshLogs">Refresh logs</button>
+      </div>
+
+      <div class="card">
+        <h3>File browser</h3>
+        <p class="muted" style="margin-top:-6px">Add mods/plugins, edit configs. Everything is sandboxed to this server.</p>
+        <div class="filebar">
+          <button id="btnUp">⬆ Up</button>
+          <span class="muted">/<span id="curPath"></span></span>
+        </div>
+        <div class="filebar">
+          <input type="file" id="uploadInput" multiple style="flex:1" />
+          <button id="btnUpload">Upload</button>
+          <button id="btnMkdir">New folder</button>
+        </div>
+        <table class="file-list"><tbody id="fileTable"><tr><td class="muted">Loading…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="card hidden" id="editorCard">
+      <div class="row"><h3 id="editorName" style="flex:1"></h3>
+        <div class="row tight" style="flex:0 0 auto">
+          <button class="primary" id="btnSaveFile">Save</button>
+          <button id="btnCloseEditor">Close</button>
+        </div>
+      </div>
+      <textarea id="editor" style="min-height:320px; font-family:monospace"></textarea>
+    </div>
+  </div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/server.js"></script>
+</body>
+</html>

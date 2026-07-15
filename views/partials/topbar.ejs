@@ -1,0 +1,8 @@
+<header class="topbar">
+  <div class="brand">🐼 Panda<span>ServerHost</span></div>
+  <nav>
+    <a href="/dashboard">Dashboard</a>
+    <% if (user && user.role === 'admin') { %><a href="/admin">Admin</a><% } %>
+    <a href="#" id="logoutLink">Logout (<%= user.username %>)</a>
+  </nav>
+</header>

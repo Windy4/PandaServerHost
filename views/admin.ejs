@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin · PandaServerHost</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <%- include('partials/topbar', { user }) %>
+  <div class="container grid">
+    <div id="msg"></div>
+    <div class="card">
+      <h3>Pending &amp; recent requests</h3>
+      <table>
+        <thead><tr><th>User</th><th>Name</th><th>Type</th><th>Version</th><th>RAM</th><th>CPU</th><th>Disk</th><th>Status</th><th></th></tr></thead>
+        <tbody id="reqTable"><tr><td class="muted">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>All servers</h3>
+      <table>
+        <thead><tr><th>ID</th><th>Owner</th><th>Name</th><th>Type</th><th>Port</th><th>Resources</th><th>Status</th><th></th></tr></thead>
+        <tbody id="srvTable"><tr><td class="muted">Loading…</td></tr></tbody>
+      </table>
+      <p class="muted" style="margin-top:8px">Remember to port-forward each server's port on your router.</p>
+    </div>
+    <div class="card">
+      <h3>Users</h3>
+      <table>
+        <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Role</th></tr></thead>
+        <tbody id="userTable"><tr><td class="muted">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/admin.js"></script>
+</body>
+</html>

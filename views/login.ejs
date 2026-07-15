@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= mode === 'register' ? 'Register' : 'Login' %> · PandaServerHost</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div class="center">
+    <div class="card auth-box">
+      <h2>🐼 Panda<span style="color:var(--accent)">ServerHost</span></h2>
+      <div id="msg"></div>
+      <form id="authForm" data-mode="<%= mode %>">
+        <label>Username</label>
+        <input name="username" autocomplete="username" required />
+        <% if (mode === 'register') { %>
+          <label>Email (optional)</label>
+          <input name="email" type="email" autocomplete="email" />
+        <% } %>
+        <label>Password</label>
+        <input name="password" type="password" autocomplete="<%= mode === 'register' ? 'new-password' : 'current-password' %>" required />
+        <div style="margin-top:16px" class="row tight">
+          <button class="primary" type="submit"><%= mode === 'register' ? 'Create account' : 'Log in' %></button>
+        </div>
+      </form>
+      <p class="muted" style="margin-top:14px">
+        <% if (mode === 'register') { %>
+          Have an account? <a href="/login">Log in</a>
+        <% } else { %>
+          No account? <a href="/register">Register</a>
+        <% } %>
+      </p>
+    </div>
+  </div>
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>
