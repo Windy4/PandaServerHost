@@ -58,7 +58,20 @@ app.use(cookieParser());
 // Views & static assets
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.use('/static', express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
+// Serve static assets with revalidation (ETag) rather than a long cache, so a
+// `git pull` + restart never leaves users on a stale server.js/style.css.
+// Browsers send a conditional request and get a fast 304 when unchanged.
+app.use(
+  '/static',
+  express.static(path.join(__dirname, 'public'), {
+    etag: true,
+    lastModified: true,
+    maxAge: 0,
+    setHeaders(res) {
+      res.setHeader('Cache-Control', 'no-cache');
+    },
+  })
+);
 
 // Attach req.user (if a valid login token is present) to every request.
 app.use(loadUser);
