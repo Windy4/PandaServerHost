@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><%= server.name %> · PandaServerHost</title>
-  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/style.css?v=<%= assetVersion %>" />
 </head>
 <body>
   <%- include('partials/topbar', { user }) %>
@@ -74,7 +74,7 @@
       <textarea id="editor" style="min-height:320px; font-family:monospace"></textarea>
     </div>
   </div>
-  <script src="/static/js/common.js"></script>
-  <script src="/static/js/server.js"></script>
+  <script src="/static/js/common.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/server.js?v=<%= assetVersion %>"></script>
 </body>
 </html>

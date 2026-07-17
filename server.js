@@ -58,6 +58,10 @@ app.use(cookieParser());
 // Views & static assets
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+// Cache-busting stamp appended to asset URLs (?v=...). Changes every restart,
+// so a `git pull` + restart forces browsers to fetch fresh JS/CSS on next load
+// without needing a manual hard refresh.
+app.locals.assetVersion = Date.now();
 // Serve static assets with revalidation (ETag) rather than a long cache, so a
 // `git pull` + restart never leaves users on a stale server.js/style.css.
 // Browsers send a conditional request and get a fast 304 when unchanged.
