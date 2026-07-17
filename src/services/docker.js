@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { Writable } = require('stream');
 const Docker = require('dockerode');
 const config = require('../config');
 
@@ -199,6 +200,48 @@ async function sendCommand(server, command) {
   return text;
 }
 
+/**
+ * Follow a container's log stream. Calls onData(text) for each decoded chunk
+ * and onEnd() when the stream closes (e.g. container stops/restarts). Returns a
+ * stop() function that tears the stream down. Sends the last `tail` lines first,
+ * then live output.
+ */
+async function streamLogs(server, { onData, onEnd, tail = 200 }) {
+  const c = await getContainer(server);
+  const stream = await c.logs({
+    follow: true,
+    stdout: true,
+    stderr: true,
+    tail,
+    timestamps: false,
+  });
+
+  const sink = new Writable({
+    write(chunk, _enc, cb) {
+      try { onData(chunk.toString('utf8')); } catch (_e) { /* consumer gone */ }
+      cb();
+    },
+  });
+  // Containers run without a TTY, so log output is multiplexed with 8-byte
+  // frame headers; demuxStream strips them for us.
+  docker.modem.demuxStream(stream, sink, sink);
+
+  let ended = false;
+  const end = () => {
+    if (ended) return;
+    ended = true;
+    try { onEnd && onEnd(); } catch (_e) { /* ignore */ }
+  };
+  stream.on('end', end);
+  stream.on('close', end);
+  stream.on('error', end);
+
+  return function stop() {
+    ended = true;
+    try { stream.destroy(); } catch (_e) { /* already gone */ }
+  };
+}
+
 async function liveStats(server) {
   const c = await getContainer(server);
   const s = await c.stats({ stream: false });
@@ -249,6 +292,7 @@ module.exports = {
   removeServer,
   statusOf,
   tailLogs,
+  streamLogs,
   liveStats,
   sendCommand,
 };

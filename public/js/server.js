@@ -30,17 +30,58 @@ async function refreshStats() {
   }
 }
 
-async function refreshLogs() {
+// Keep at most this many characters in the console DOM node so a long-running
+// stream doesn't grow memory without bound.
+const LOG_MAX_CHARS = 200000;
+let logSocket = null;
+let logReconnectTimer = null;
+let logClosedByUs = false;
+
+function appendLog(text) {
   const el = document.getElementById('logs');
-  // Only auto-scroll if the user is already near the bottom, so we don't yank
-  // them down while they're scrolled up reading history.
+  if (!el) return;
   const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  if (el.textContent === 'Loading…') el.textContent = '';
+  let next = el.textContent + text;
+  if (next.length > LOG_MAX_CHARS) next = next.slice(next.length - LOG_MAX_CHARS);
+  el.textContent = next;
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+// Open a streaming WebSocket to the server's live log tail, with auto-reconnect.
+function connectLogStream() {
+  logClosedByUs = false;
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = proto + '://' + location.host + '/ws/servers/' + SID + '/logs';
+  let sock;
   try {
-    const { logs } = await api('GET', base + '/logs?tail=300');
-    const next = logs || '(no output yet)';
-    if (el.textContent !== next) el.textContent = next;
-    if (atBottom) el.scrollTop = el.scrollHeight;
-  } catch (e) { el.textContent = e.message; }
+    sock = new WebSocket(url);
+  } catch (_e) {
+    scheduleLogReconnect();
+    return;
+  }
+  logSocket = sock;
+  sock.onmessage = (ev) => appendLog(ev.data);
+  sock.onclose = () => {
+    if (!logClosedByUs) scheduleLogReconnect();
+  };
+  sock.onerror = () => {
+    try { sock.close(); } catch (_e) { /* ignore */ }
+  };
+}
+
+function scheduleLogReconnect() {
+  clearTimeout(logReconnectTimer);
+  logReconnectTimer = setTimeout(connectLogStream, 3000);
+}
+
+// Manual reconnect (also used by the button) — drop the current socket and
+// reopen a fresh stream.
+function refreshLogs() {
+  logClosedByUs = true;
+  if (logSocket) { try { logSocket.close(); } catch (_e) { /* ignore */ } }
+  document.getElementById('logs').textContent = 'Loading…';
+  connectLogStream();
 }
 
 // ---- File browser ------------------------------------------------------
@@ -101,10 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     input.value = '';
     try {
       const { output } = await api('POST', base + '/command', { command });
-      // Show the response separately so the live-tailing console doesn't wipe
-      // it (query commands like `list` don't appear in the server log).
-      showMsg('> ' + command + (output ? '\n' + output : '  (sent)'), true);
-      refreshLogs();
+      // Query commands like `list` don't appear in the server log, so surface
+      // the RCON response directly in the console too.
+      appendLog('\n> ' + command + (output ? '\n' + output + '\n' : '\n'));
     } catch (err) {
       showMsg('> ' + command + '\n[error] ' + err.message, false);
     }
@@ -165,11 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('editorCard').classList.add('hidden');
   });
 
-  refreshStatus(); refreshStats(); refreshLogs(); loadDir('');
+  refreshStatus(); refreshStats(); loadDir('');
+  connectLogStream(); // live console via WebSocket (no polling)
   setInterval(refreshStatus, 8000);
   setInterval(refreshStats, 8000);
-  // Live console tail.
-  setInterval(refreshLogs, 3000);
   // Auto-refresh the file list, but not while the editor is open (so it doesn't
   // re-render the tree under you mid-edit).
   setInterval(() => {

@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const http = require('http');
 const express = require('express');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
@@ -9,6 +10,7 @@ const rateLimit = require('express-rate-limit');
 const config = require('./src/config');
 require('./src/db'); // initialise schema
 const { loadUser } = require('./src/middleware/auth');
+const ws = require('./src/ws');
 
 const app = express();
 app.disable('x-powered-by');
@@ -105,7 +107,10 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'internal error' });
 });
 
-app.listen(config.port, config.host, () => {
+const server = http.createServer(app);
+ws.attach(server); // live log streaming at /ws/servers/:id/logs
+
+server.listen(config.port, config.host, () => {
   // eslint-disable-next-line no-console
   console.log(`PandaServerHost control panel listening on http://${config.host}:${config.port}`);
 });
