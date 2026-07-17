@@ -32,10 +32,14 @@ async function refreshStats() {
 
 async function refreshLogs() {
   const el = document.getElementById('logs');
+  // Only auto-scroll if the user is already near the bottom, so we don't yank
+  // them down while they're scrolled up reading history.
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   try {
     const { logs } = await api('GET', base + '/logs?tail=300');
-    el.textContent = logs || '(no output yet)';
-    el.scrollTop = el.scrollHeight;
+    const next = logs || '(no output yet)';
+    if (el.textContent !== next) el.textContent = next;
+    if (atBottom) el.scrollTop = el.scrollHeight;
   } catch (e) { el.textContent = e.message; }
 }
 
@@ -94,16 +98,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('cmdInput');
     const command = input.value.trim();
     if (!command) return;
-    const el = document.getElementById('logs');
-    el.textContent += '\n> ' + command;
+    input.value = '';
     try {
       const { output } = await api('POST', base + '/command', { command });
-      if (output) el.textContent += '\n' + output;
+      // Show the response separately so the live-tailing console doesn't wipe
+      // it (query commands like `list` don't appear in the server log).
+      showMsg('> ' + command + (output ? '\n' + output : '  (sent)'), true);
+      refreshLogs();
     } catch (err) {
-      el.textContent += '\n[error] ' + err.message;
+      showMsg('> ' + command + '\n[error] ' + err.message, false);
     }
-    el.scrollTop = el.scrollHeight;
-    input.value = '';
   });
 
   document.getElementById('btnUp').addEventListener('click', () => {
@@ -164,4 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshStatus(); refreshStats(); refreshLogs(); loadDir('');
   setInterval(refreshStatus, 8000);
   setInterval(refreshStats, 8000);
+  // Live console tail.
+  setInterval(refreshLogs, 3000);
+  // Auto-refresh the file list, but not while the editor is open (so it doesn't
+  // re-render the tree under you mid-edit).
+  setInterval(() => {
+    if (document.getElementById('editorCard').classList.contains('hidden')) loadDir(cwd);
+  }, 5000);
 });
