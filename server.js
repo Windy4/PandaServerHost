@@ -15,6 +15,11 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 // --- Security headers ---------------------------------------------------
+// When serving plain HTTP (SECURE_COOKIES=false), we MUST NOT emit
+// `upgrade-insecure-requests` (it would force the browser to rewrite our
+// fetch/asset requests to https:// and they'd fail) or HSTS (which the browser
+// caches and then refuses plain HTTP). Both are enabled only behind HTTPS.
+const behindHttps = config.secureCookies;
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -26,8 +31,12 @@ app.use(
         connectSrc: ["'self'"],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
+        // Drop the default upgrade-insecure-requests unless we're on HTTPS.
+        upgradeInsecureRequests: behindHttps ? [] : null,
       },
     },
+    // Only send HSTS when actually serving HTTPS.
+    hsts: behindHttps,
     crossOriginEmbedderPolicy: false,
   })
 );
