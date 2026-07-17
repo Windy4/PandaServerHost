@@ -2,10 +2,24 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const Docker = require('dockerode');
 const config = require('../config');
 
 const docker = new Docker(); // uses /var/run/docker.sock by default
+
+/**
+ * Per-server RCON password. Deterministic (derived from the JWT secret + server
+ * id) so it survives restarts, and never leaves the container: RCON is not
+ * published to any host port, so this only authenticates rcon-cli inside it.
+ */
+function rconPassword(server) {
+  return crypto
+    .createHmac('sha256', config.jwtSecret)
+    .update('rcon:' + server.id)
+    .digest('hex')
+    .slice(0, 24);
+}
 
 /** Deterministic container name for a server row. */
 function containerName(serverId) {
@@ -63,7 +77,12 @@ async function deployServer(server) {
     `VERSION=${server.mc_version}`,
     `MEMORY=${heapMb}M`,
     // itzg respects INIT_MEMORY/MAX_MEMORY too; MEMORY sets both.
-    'ENABLE_RCON=false',
+    // Enable RCON so the dashboard can send console commands. The RCON port is
+    // NOT published to the host (no PortBindings entry for 25575), so it is only
+    // reachable from inside the container via rcon-cli through `docker exec`.
+    'ENABLE_RCON=true',
+    'RCON_PORT=25575',
+    `RCON_PASSWORD=${rconPassword(server)}`,
     'STOP_SERVER_ANNOUNCE_DELAY=5',
   ];
 
@@ -153,6 +172,33 @@ async function tailLogs(server, tail = 200) {
   return demux(buf);
 }
 
+/**
+ * Send a console command to the running server via rcon-cli inside the
+ * container. The command is passed as a single argv element (no shell), so
+ * there is no shell-injection surface. Returns the server's text response.
+ */
+async function sendCommand(server, command) {
+  const c = await getContainer(server);
+  const exec = await c.exec({
+    Cmd: ['rcon-cli', String(command)],
+    AttachStdout: true,
+    AttachStderr: true,
+  });
+  const stream = await exec.start({ hijack: true, stdin: false });
+  const buf = await new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on('data', (d) => chunks.push(d));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+  });
+  const info = await exec.inspect().catch(() => ({ ExitCode: 0 }));
+  const text = demux(buf).trim();
+  if (info.ExitCode && info.ExitCode !== 0) {
+    throw new Error(text || 'command failed (is the server fully started?)');
+  }
+  return text;
+}
+
 async function liveStats(server) {
   const c = await getContainer(server);
   const s = await c.stats({ stream: false });
@@ -204,4 +250,5 @@ module.exports = {
   statusOf,
   tailLogs,
   liveStats,
+  sendCommand,
 };

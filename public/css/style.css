@@ -72,7 +72,22 @@ pre.logs {
   padding: 12px; height: 340px; overflow: auto; font-size: 12px; white-space: pre-wrap;
 }
 .filebar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
-.file-list .fname { cursor: pointer; }
+/* File browser: keep rows tidy and stop action buttons from widening the row. */
+.file-list { table-layout: fixed; width: 100%; }
+.file-list td { vertical-align: middle; }
+.file-list .fcell { overflow: hidden; }
+.file-list .fname {
+  cursor: pointer; display: inline-block; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+}
+.file-list .fsize { width: 84px; text-align: right; white-space: nowrap; font-size: 13px; }
+.file-list td.actions { width: 118px; }
+.actbar { display: flex; gap: 6px; justify-content: flex-end; }
+.btn-sm {
+  padding: 4px 8px; font-size: 13px; line-height: 1; border-radius: 6px;
+  display: inline-flex; align-items: center; text-decoration: none;
+}
+.btn-sm:hover { text-decoration: none; }
 .stat { display: flex; gap: 18px; flex-wrap: wrap; }
 .stat .item { background: var(--panel-2); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); }
 .stat .item b { display: block; font-size: 18px; }

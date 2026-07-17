@@ -36,9 +36,14 @@
 
     <div class="split">
       <div class="card">
-        <h3>Console output</h3>
+        <h3>Console</h3>
         <pre class="logs" id="logs">Loading…</pre>
-        <button id="btnRefreshLogs">Refresh logs</button>
+        <form id="cmdForm" class="filebar" style="margin-top:10px; flex-wrap:nowrap">
+          <span class="muted" style="font-family:monospace">/</span>
+          <input id="cmdInput" placeholder="say hello   ·   op &lt;name&gt;   ·   time set day" autocomplete="off" style="flex:1" />
+          <button class="primary" type="submit">Send</button>
+        </form>
+        <button id="btnRefreshLogs" style="margin-top:8px">Refresh logs</button>
       </div>
 
       <div class="card">
@@ -53,7 +58,9 @@
           <button id="btnUpload">Upload</button>
           <button id="btnMkdir">New folder</button>
         </div>
-        <table class="file-list"><tbody id="fileTable"><tr><td class="muted">Loading…</td></tr></tbody></table>
+        <div style="overflow-x:auto">
+          <table class="file-list"><tbody id="fileTable"><tr><td class="muted">Loading…</td></tr></tbody></table>
+        </div>
       </div>
     </div>
 

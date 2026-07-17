@@ -96,6 +96,19 @@ router.get('/:id/logs', loadServer, async (req, res) => {
   }
 });
 
+// Send a console command to the server (via internal RCON).
+router.post('/:id/command', loadServer, async (req, res) => {
+  const command = String((req.body && req.body.command) || '').trim();
+  if (!command) return res.status(400).json({ error: 'command is required' });
+  if (command.length > 500) return res.status(400).json({ error: 'command too long' });
+  try {
+    const output = await dockerSvc.sendCommand(req.server, command);
+    res.json({ ok: true, output });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get('/:id/stats', loadServer, async (req, res) => {
   try {
     const stats = await dockerSvc.liveStats(req.server);

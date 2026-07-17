@@ -52,13 +52,16 @@ async function loadDir(p) {
     tbody.innerHTML = data.items.map((it) => {
       const full = (cwd ? cwd + '/' : '') + it.name;
       const icon = it.dir ? '📁' : '📄';
-      const size = it.dir ? '' : fmtBytes(Math.max(1, Math.round(it.size / 1024 / 1024)) === 0 ? 0 : Math.round(it.size / 1024 / 1024)) ;
-      const nameCell = '<span class="fname" data-path="' + esc(full) + '" data-dir="' + it.dir + '">' + icon + ' ' + esc(it.name) + '</span>';
+      const nameCell = '<span class="fname" data-path="' + esc(full) + '" data-dir="' + it.dir + '" title="' + esc(it.name) + '">' + icon + ' ' + esc(it.name) + '</span>';
       const actions =
-        (it.dir ? '' : '<button data-edit="' + esc(full) + '">Edit</button> ' +
-                       '<a class="btn" href="' + base + '/files/download?path=' + encodeURIComponent(full) + '">Download</a> ') +
-        '<button class="danger" data-rm="' + esc(full) + '">Delete</button>';
-      return '<tr><td>' + nameCell + '</td><td class="muted">' + (it.dir ? 'folder' : it.size + ' B') + '</td><td>' + actions + '</td></tr>';
+        (it.dir ? '' :
+          '<button class="btn-sm" data-edit="' + esc(full) + '" title="Edit">✎</button>' +
+          '<a class="btn btn-sm" href="' + base + '/files/download?path=' + encodeURIComponent(full) + '" title="Download">⬇</a>') +
+        '<button class="btn-sm danger" data-rm="' + esc(full) + '" title="Delete">🗑</button>';
+      return '<tr>' +
+        '<td class="fcell">' + nameCell + '</td>' +
+        '<td class="fsize muted">' + (it.dir ? '—' : fmtSize(it.size)) + '</td>' +
+        '<td class="actions"><div class="actbar">' + actions + '</div></td></tr>';
     }).join('');
   } catch (e) { tbody.innerHTML = '<tr><td class="muted">' + esc(e.message) + '</td></tr>'; }
 }
@@ -85,6 +88,23 @@ document.addEventListener('DOMContentLoaded', () => {
     catch (e) { showMsg(e.message, false); }
   });
   document.getElementById('btnRefreshLogs').addEventListener('click', refreshLogs);
+
+  document.getElementById('cmdForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('cmdInput');
+    const command = input.value.trim();
+    if (!command) return;
+    const el = document.getElementById('logs');
+    el.textContent += '\n> ' + command;
+    try {
+      const { output } = await api('POST', base + '/command', { command });
+      if (output) el.textContent += '\n' + output;
+    } catch (err) {
+      el.textContent += '\n[error] ' + err.message;
+    }
+    el.scrollTop = el.scrollHeight;
+    input.value = '';
+  });
 
   document.getElementById('btnUp').addEventListener('click', () => {
     if (!cwd) return;
