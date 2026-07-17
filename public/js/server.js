@@ -78,6 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnStart').addEventListener('click', () => control('start'));
   document.getElementById('btnStop').addEventListener('click', () => control('stop'));
   document.getElementById('btnRestart').addEventListener('click', () => control('restart'));
+  document.getElementById('btnRedeploy').addEventListener('click', async () => {
+    if (!confirm('Recreate this server\'s container? Same port and files are kept.')) return;
+    showMsg('Redeploying… this can take a moment.', true);
+    try { await api('POST', base + '/redeploy'); showMsg('Redeployed.', true); refreshStatus(); refreshLogs(); }
+    catch (e) { showMsg(e.message, false); }
+  });
   document.getElementById('btnRefreshLogs').addEventListener('click', refreshLogs);
 
   document.getElementById('btnUp').addEventListener('click', () => {

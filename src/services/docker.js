@@ -83,7 +83,14 @@ async function deployServer(server) {
       NanoCpus: Math.round(server.cpu_cores * 1e9),
       PidsLimit: 512,
       // --- Isolation / hardening ---
+      // Drop every capability, then add back only what the itzg entrypoint
+      // needs: it starts as root, chowns /data, and uses gosu/su-exec to drop
+      // to the unprivileged `minecraft` user (UID 1000). Without SETUID/SETGID
+      // that switch fails with "operation not permitted"; CHOWN/DAC_OVERRIDE/
+      // FOWNER let it fix /data ownership. no-new-privileges still prevents
+      // regaining privileges once dropped.
       CapDrop: ['ALL'],
+      CapAdd: ['CHOWN', 'DAC_OVERRIDE', 'FOWNER', 'FSETID', 'SETUID', 'SETGID', 'KILL'],
       SecurityOpt: ['no-new-privileges:true'],
       ReadonlyRootfs: false, // /data must be writable; rootfs stays default
       RestartPolicy: { Name: 'unless-stopped' },

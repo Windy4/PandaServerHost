@@ -11,6 +11,7 @@ const router = express.Router();
 const getServer = db.prepare('SELECT * FROM servers WHERE id = ?');
 const listByOwner = db.prepare('SELECT * FROM servers WHERE owner_id = ? ORDER BY created_at DESC');
 const setStatus = db.prepare('UPDATE servers SET status = ? WHERE id = ?');
+const setContainer = db.prepare('UPDATE servers SET container_id = ?, status = ? WHERE id = ?');
 const delServer = db.prepare('DELETE FROM servers WHERE id = ?');
 
 router.use(requireAuth);
@@ -68,6 +69,19 @@ router.post('/:id/restart', loadServer, async (req, res) => {
     setStatus.run('running', req.server.id);
     res.json({ ok: true });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Recreate the container in place (same port + data dir). Use this to apply a
+// fixed deploy config to a server that was created with an older/broken one.
+router.post('/:id/redeploy', loadServer, async (req, res) => {
+  try {
+    const containerId = await dockerSvc.deployServer(req.server);
+    setContainer.run(containerId, 'running', req.server.id);
+    res.json({ ok: true, status: 'running' });
+  } catch (e) {
+    setContainer.run(null, 'error', req.server.id);
     res.status(500).json({ error: e.message });
   }
 });
