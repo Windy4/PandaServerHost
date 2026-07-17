@@ -24,13 +24,38 @@ function rootFor(req) {
   return dockerSvc.serverDataDir(req.server.id);
 }
 
+// Internal/credential files the panel manages that a server owner must never
+// see or touch. `.rcon-cli.env` / `.rcon-cli.yaml` contain the RCON password.
+// Matched case-insensitively on the file's basename only (legit config files
+// like paper-global.yml / bukkit.yml are NOT hidden).
+const HIDDEN_NAMES = new Set(['.rcon-cli.env', '.rcon-cli.yaml', '.rcon-cli.yml']);
+function isHidden(name) {
+  const n = String(name).toLowerCase();
+  if (HIDDEN_NAMES.has(n)) return true;
+  if (n.startsWith('.rcon-cli')) return true; // any rcon-cli.* variant
+  return false;
+}
+
+// Throw if the target path (by basename) is a hidden/internal file. Used by
+// every read/write/delete/download op so hidden files can't be reached even by
+// requesting their exact path.
+function guardHidden(absPath) {
+  if (isHidden(path.basename(absPath))) {
+    const err = new Error('file not found');
+    err.hidden = true;
+    throw err;
+  }
+}
+
 // List a directory.
 router.get('/list', async (req, res) => {
   try {
     const root = rootFor(req);
     fs.mkdirSync(root, { recursive: true });
     const dir = resolveInside(root, req.query.path || '');
-    const entries = await fsp.readdir(dir, { withFileTypes: true });
+    const entries = (await fsp.readdir(dir, { withFileTypes: true })).filter(
+      (e) => !isHidden(e.name)
+    );
     const items = await Promise.all(
       entries.map(async (e) => {
         const full = path.join(dir, e.name);
@@ -55,6 +80,7 @@ router.get('/read', async (req, res) => {
   try {
     const root = rootFor(req);
     const file = resolveInside(root, req.query.path || '');
+    guardHidden(file);
     const st = await fsp.stat(file);
     if (st.isDirectory()) return res.status(400).json({ error: 'that is a directory' });
     if (st.size > EDITABLE_MAX_BYTES) {
@@ -72,6 +98,7 @@ router.post('/save', express.json({ limit: '4mb' }), async (req, res) => {
   try {
     const root = rootFor(req);
     const file = resolveInside(root, req.body.path || '');
+    guardHidden(file);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     await fsp.writeFile(file, String(req.body.content ?? ''), 'utf8');
     res.json({ ok: true });
@@ -85,6 +112,7 @@ router.get('/download', async (req, res) => {
   try {
     const root = rootFor(req);
     const file = resolveInside(root, req.query.path || '');
+    guardHidden(file);
     const st = await fsp.stat(file);
     if (st.isDirectory()) return res.status(400).json({ error: 'cannot download a directory' });
     res.download(file, path.basename(file));
@@ -103,6 +131,7 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
       // Never trust the client filename for traversal.
       const safeName = path.basename(f.originalname);
       const dest = resolveInside(dir, safeName);
+      guardHidden(dest); // don't let uploads clobber managed credential files
       await fsp.writeFile(dest, f.buffer);
     }
     res.json({ ok: true, count: (req.files || []).length });
@@ -128,6 +157,7 @@ router.post('/delete', express.json(), async (req, res) => {
   try {
     const root = rootFor(req);
     const target = resolveInside(root, req.body.path || '');
+    guardHidden(target);
     if (target === path.resolve(root)) {
       return res.status(400).json({ error: 'cannot delete the server root' });
     }
