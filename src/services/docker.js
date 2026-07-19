@@ -85,6 +85,10 @@ async function deployServer(server) {
     `VERSION=${server.mc_version}`,
     `MEMORY=${heapMb}M`,
     // itzg respects INIT_MEMORY/MAX_MEMORY too; MEMORY sets both.
+    // Aikar's tuned G1GC flags: smoother pauses and, crucially, they return
+    // freed heap to the OS aggressively so container RSS doesn't just ratchet
+    // up toward the cap. The standard choice for Minecraft servers.
+    'USE_AIKAR_FLAGS=true',
     // Cap Netty's off-heap direct-buffer pool at ~half the reserve so it can't
     // grow unbounded and OOM the container; the other half stays free for
     // metaspace, thread stacks, JIT code cache and GC structures.
