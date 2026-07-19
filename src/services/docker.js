@@ -69,8 +69,15 @@ async function deployServer(server) {
     /* none existed */
   }
 
-  // Give the JVM ~85% of the container RAM; leave headroom for native/off-heap.
-  const heapMb = Math.max(512, Math.floor(server.ram_mb * 0.85));
+  // The container has a HARD memory cap (server.ram_mb) with swap disabled, so
+  // if total process memory exceeds it the kernel OOM-kills the JVM (seen as
+  // exitCode -1). The JVM needs a lot of memory BEYOND the heap: metaspace,
+  // thread stacks, JIT code cache, GC structures and — for Minecraft — Netty
+  // off-heap direct buffers that grow with player count. So we size the heap to
+  // the container RAM minus a reserve (~25%, at least 512 MB, capped at 2 GB),
+  // rather than 85% of it, to leave that headroom and avoid OOM kills.
+  const reserveMb = Math.min(2048, Math.max(512, Math.round(server.ram_mb * 0.25)));
+  const heapMb = Math.max(512, server.ram_mb - reserveMb);
 
   const env = [
     'EULA=TRUE',
@@ -78,6 +85,10 @@ async function deployServer(server) {
     `VERSION=${server.mc_version}`,
     `MEMORY=${heapMb}M`,
     // itzg respects INIT_MEMORY/MAX_MEMORY too; MEMORY sets both.
+    // Cap Netty's off-heap direct-buffer pool at ~half the reserve so it can't
+    // grow unbounded and OOM the container; the other half stays free for
+    // metaspace, thread stacks, JIT code cache and GC structures.
+    `JVM_OPTS=-XX:MaxDirectMemorySize=${Math.min(512, Math.max(128, Math.round(reserveMb / 2)))}M`,
     // Enable RCON so the dashboard can send console commands. The RCON port is
     // NOT published to the host (no PortBindings entry for 25575), so it is only
     // reachable from inside the container via rcon-cli through `docker exec`.
