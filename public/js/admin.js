@@ -30,7 +30,10 @@ async function loadServers() {
       '<td>' + esc(s.server_type) + '</td><td><b>' + s.host_port + '</b></td>' +
       '<td class="muted">' + s.ram_mb + 'MB · ' + s.cpu_cores + ' CPU · ' + s.disk_mb + 'MB</td>' +
       '<td><span class="badge ' + esc(s.status) + '">' + esc(s.status) + '</span></td>' +
-      '<td><button class="danger" data-del="' + s.id + '">Delete</button></td></tr>'
+      '<td class="actions"><div class="actbar">' +
+        '<button class="btn-sm" data-edit=\'' + esc(JSON.stringify({ id: s.id, ram: s.ram_mb, cpu: s.cpu_cores, disk: s.disk_mb })) + '\'>Edit</button>' +
+        '<button class="btn-sm danger" data-del="' + s.id + '">Delete</button>' +
+      '</div></td></tr>'
     ).join('');
   } catch (e) { tbody.innerHTML = '<tr><td class="muted">' + esc(e.message) + '</td></tr>'; }
 }
@@ -70,9 +73,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('srvTable').addEventListener('click', async (e) => {
     const del = e.target.getAttribute('data-del');
+    const editRaw = e.target.getAttribute('data-edit');
     if (del && confirm('Delete this server and its container? (Files stay on disk.)')) {
       try { await api('DELETE', '/api/servers/' + del); showMsg('Server deleted.', true); }
       catch (err) { showMsg(err.message, false); }
+      loadServers();
+    } else if (editRaw) {
+      const cur = JSON.parse(editRaw);
+      const ram = prompt('RAM in MB (e.g. 4096):', cur.ram);
+      if (ram === null) return;
+      const cpu = prompt('CPU cores (e.g. 2 or 1.5):', cur.cpu);
+      if (cpu === null) return;
+      const disk = prompt('Disk in MB (e.g. 10240):', cur.disk);
+      if (disk === null) return;
+      showMsg('Applying new limits and redeploying… this restarts the server (world is kept).', true);
+      try {
+        const r = await api('POST', '/api/admin/servers/' + cur.id + '/resources',
+          { ram_mb: ram, cpu_cores: cpu, disk_mb: disk });
+        showMsg('Updated to ' + r.ram_mb + 'MB · ' + r.cpu_cores + ' CPU · ' + r.disk_mb + 'MB (' + r.status + ').', true);
+      } catch (err) { showMsg(err.message, false); }
       loadServers();
     }
   });
