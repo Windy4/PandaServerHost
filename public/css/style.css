@@ -70,6 +70,9 @@ th { color: var(--muted); font-weight: 600; }
 pre.logs {
   background: #0a0d11; border: 1px solid var(--border); border-radius: 8px;
   padding: 12px; height: 340px; overflow: auto; font-size: 12px; white-space: pre-wrap;
+  /* Break long unbreakable tokens (stack traces, paths) so they wrap inside the
+     box instead of pushing the layout wider. */
+  overflow-wrap: anywhere; word-break: break-word; max-width: 100%;
 }
 .filebar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
 /* File browser: keep rows tidy and stop action buttons from widening the row. */
@@ -92,5 +95,9 @@ pre.logs {
 .stat .item { background: var(--panel-2); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); }
 .stat .item b { display: block; font-size: 18px; }
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+/* Grid items default to min-width:auto, which lets wide content (long log lines)
+   blow the column out and shove the other column over. Pin to 0 so columns stay
+   within their track and content scrolls/wraps inside instead. */
+.split > * { min-width: 0; }
 @media (max-width: 820px) { .split { grid-template-columns: 1fr; } }
 .hidden { display: none !important; }
